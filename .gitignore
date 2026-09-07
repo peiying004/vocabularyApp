@@ -1,0 +1,20 @@
+# ---- macOS ----
+.DS_Store
+
+# ---- Xcode ----
+xcuserdata/
+DerivedData/
+build/
+
+# ---- 測試與建置產物（不進版控）----
+*.xcresult
+TestResults/
+*.xccovreport
+*.xccovarchive
+
+# ---- Spectra 本機狀態（可重建）----
+.spectra/
+openspec/.vector-search.db*
+
+# ---- Claude Code 個人環境設定 ----
+.claude/settings.local.json
