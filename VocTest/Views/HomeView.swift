@@ -2,7 +2,11 @@ import SwiftUI
 
 /// 首頁：App 導覽的第一層，讓使用者在「單字」與「文法」兩種測驗模式間選擇，
 /// 分別導向 DeckListView 與 GrammarDeckListView。
+/// toolbar 另有說明按鈕，可隨時重看首次啟動教學。
 struct HomeView: View {
+    /// 使用者按下說明按鈕時呼叫。教學遮罩由根 view 持有，這裡只負責發出請求。
+    let onShowTutorial: () -> Void
+
     var body: some View {
         VStack(spacing: 20) {
             NavigationLink {
@@ -33,6 +37,14 @@ struct HomeView: View {
         }
         .padding()
         .navigationTitle("VocTest")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: onShowTutorial) {
+                    Image(systemName: "questionmark.circle")
+                }
+                .accessibilityLabel("查看使用教學")
+            }
+        }
     }
 }
 

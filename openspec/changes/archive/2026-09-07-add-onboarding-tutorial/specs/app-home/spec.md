@@ -1,12 +1,4 @@
-# app-home Specification
-
-## Purpose
-
-Defines the Home shell that serves as the app's root view: the two primary entry buttons that split the app into its vocabulary and grammar learning routes, and the auxiliary help control that re-presents the tutorial.
-
-The Home shell is deliberately thin. It routes and nothing else — no deck rows, batch rows, or quiz elements render here, so that the two learning routes stay visually symmetric and independent of each other's content.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Home Shell As App Root
 
@@ -46,15 +38,3 @@ The system SHALL present a Home shell as the root view of the app. The Home shel
 | Vocabulary    | main content area        | primary entry    | pushes vocabulary Deck List             |
 | Grammar       | main content area        | primary entry    | pushes grammar Deck List                |
 | Help          | trailing toolbar         | auxiliary        | presents tutorial overlay, no navigation |
-
-<!-- @trace
-source: add-onboarding-tutorial
-updated: 2026-09-07
-code:
-  - VocTest/Views/OnboardingIllustrations.swift
-  - VocTest/ContentView.swift
-  - VocTest/Views/OnboardingPage.swift
-  - VocTestTests/OnboardingTests.swift
-  - VocTest/Views/HomeView.swift
-  - VocTest/Views/OnboardingOverlayView.swift
--->
