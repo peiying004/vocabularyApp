@@ -43,7 +43,7 @@ final class Deck {
 
 ### 2. Markdown 解析（容錯的表格解析器）
 
-解析器以 `|` 切欄，支援 2 欄（單字、翻譯）或 3 欄（單字、詞性、翻譯），並自動略過表頭與分隔列；無法解析的行會回傳行號：
+解析器以 `|` 切欄，支援 2 欄（單字、翻譯）或 3 欄（單字、詞性、翻譯），並自動略過表頭與分隔列；無法解析的行會回傳行號。下面的範例為了聚焦在欄位規則，省略了實際程式裡「跳過空白行」「略過表格分隔列」「略過表頭列」三段判斷，完整邏輯見 `VocTest/Parser/MarkdownParser.swift`。沒有 `|` 的行（例如 YAML front-matter 的 `---` 或 `title:`）欄位數不是 2 或 3，會落到 `default` 被回報為無效行，這是刻意的行為，`vocabulary-import` spec 與測試都鎖住它：
 
 ```swift
 enum MarkdownParser {
@@ -64,6 +64,9 @@ enum MarkdownParser {
                 }
                 cards.append(ParsedCard(word: cells[0], partOfSpeech: pos, translation: cells[2]))
             case 2:  // 單字 | 翻譯
+                guard !cells[0].isEmpty, !cells[1].isEmpty else {
+                    errors.append(ParseError(lineNumber: idx + 1, rawLine: rawLine)); continue
+                }
                 cards.append(ParsedCard(word: cells[0], partOfSpeech: nil, translation: cells[1]))
             default:
                 errors.append(ParseError(lineNumber: idx + 1, rawLine: rawLine))
@@ -258,9 +261,9 @@ struct DeckListView: View {
 ```mermaid
 stateDiagram-v2
     [*] --> 出題: 從批次隨機抽最多 chunkSize 題（目前 40）
-    出題 --> 判定: 使用者選答 / 點「不知道」
+    出題 --> 判定: 使用者選答 / 點「我不會」
     判定 --> 答對: 選項 == 正解
-    判定 --> 答錯: 選項 != 正解 或 不知道
+    判定 --> 答錯: 選項 != 正解 或 我不會
 
     答對 --> 檢查佇列: 移出佇列
     答錯 --> 檢查佇列: 記錄錯誤 + 重新插回後方(間隔≤3)
@@ -291,7 +294,7 @@ func testReindexAfterDeletingMiddleBatch() throws {
 }
 ```
 
-測試涵蓋範圍：Markdown 解析邊界、切批規則（每批 40 且編號連續）、批量寫入的部分填入與溢出切批、測驗狀態機（答錯重新入列、結算計數）、批次重新編號與級聯刪除、單筆增刪改的驗證與容量上限（`CardEditorTests` / `GrammarItemEditorTests`），以及 `resetWrongCount()` 的歸零與重新累計行為。
+測試涵蓋範圍：Markdown 解析邊界、切批規則（每批 40 且編號連續）、批量寫入的部分填入與溢出切批、測驗狀態機（答錯重新入列、結算計數）、批次重新編號與級聯刪除、單筆增刪改的驗證與容量上限（`CardEditorTests` / `GrammarItemEditorTests`），以及 `resetWrongCount()` 的歸零與重新累計行為。另有 `OnboardingTests`（教學固定 4 頁、標題順序、第 2 頁文案引用實際的 `chunkSize`）與 `AcceptanceTests`（從匯入切批到一輪測驗結束的端對端場景）。
 
 容量相關的期望值一律由 `chunkSize` 推導而非寫死數字，因此日後再調整批次大小時不需要重寫這批測試。
 

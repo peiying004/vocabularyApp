@@ -45,10 +45,16 @@
 
 採分層架構，UI 只負責呈現與互動，所有可測試的邏輯（解析、測驗、切批）都放在不依賴 SwiftUI 的純邏輯層。
 
-**怎麼看這張圖**：圖分成上、中、下三個大框，代表三層。最上層是**畫面**（使用者看得到的），中間是**純邏輯**（負責運算、看不到），最下層是**資料**（存起來的東西）。箭頭代表資料的流向——順著箭頭走，就是「使用者貼上文字 → 解析 → 匯入 → 存進資料庫」的過程。重點是：箭頭**由上往下**，代表畫面會用到邏輯、邏輯會存進資料，但反過來不會，這就是「分層」。
+**怎麼看這張圖**：圖分成四個大框，代表四層。最上層是 **App 殼層**（App 的外殼：建立導覽堆疊、決定要不要疊上首次啟動教學），第二層是**畫面**（使用者看得到的），第三層是**純邏輯**（負責運算、看不到），最下層是**資料**（存起來的東西）。箭頭代表資料的流向——順著箭頭走，就是「使用者貼上文字 → 解析 → 匯入 → 存進資料庫」的過程。重點是：箭頭**由上往下**，代表畫面會用到邏輯、邏輯會存進資料，但反過來不會，這就是「分層」。殼層裡的「已看過教學」旗標存在 `UserDefaults`（iOS 內建的簡易偏好設定儲存），不在最下層的 SwiftData 資料庫裡，所以它畫在殼層框內、不接到資料層。
 
 ```mermaid
 flowchart TD
+    subgraph Shell["App 殼層"]
+        CV[ContentView<br/>NavigationStack + overlay]
+        OB[OnboardingOverlayView<br/>4 頁教學卡]
+        UD[(UserDefaults<br/>hasSeenOnboarding)]
+    end
+
     subgraph View["View 層 · SwiftUI"]
         HV[HomeView 首頁]
         DLV[DeckListView / GrammarDeckListView 分組列表]
@@ -75,6 +81,11 @@ flowchart TD
         CARD[Card / GrammarItem]
     end
 
+    CV -->|掛載首頁 並傳入重看教學的回呼| HV
+    CV -->|首次啟動 或 首頁問號按鈕| OB
+    OB -->|首次看完才寫入旗標| UD
+    UD -->|啟動時讀取| CV
+
     IV -->|原始文字| MP
     MP -->|解析結果| IMP
     IMP -->|寫入| Model
@@ -95,6 +106,8 @@ flowchart TD
     DECK -->|cascade| BATCH
     BATCH -->|cascade| CARD
 ```
+
+**App 殼層在做什麼**：`ContentView` 建立全域的 `NavigationStack`，把 `HomeView` 放進去，並用 `.overlay` 在整個導覽堆疊之上疊首次啟動教學。教學要不要顯示，只看 `UserDefaults` 裡的 `hasSeenOnboarding` 旗標；首次看完教學才寫入，首頁右上角問號按鈕重看時不會動這個旗標。旗標刻意不用「資料庫是否為空」判斷，因為使用者把內容全部刪光是正常操作，那時不該再彈一次教學。
 
 **分層原則**：`Parser`、`Importer`、`Editor`、`ReviewEngine` 都是純 Swift（`enum` 靜態方法或獨立 `class`），不 import SwiftUI，因此可以用 XCTest 直接測試，不必啟動畫面。
 
@@ -175,44 +188,67 @@ classDiagram
 
 從開啟 App 到完成一輪測驗的主要動線：
 
-**怎麼看這張圖**：把它當成「使用者的腳步路線圖」。橢圓形 `([開啟 App])` 是起點與終點，方形是一個個畫面，箭頭上的字是「使用者做了什麼動作」（例如「點分組」「匯入」）。順著箭頭走一遍，就是一位使用者從打開 App 到考完一輪、複習錯題的完整過程。
+**怎麼看這張圖**：把它當成「使用者的腳步路線圖」。橢圓形 `([開啟 App])` 是起點，菱形是 App 自動做的判斷，方形是一個個畫面，箭頭上的字是「使用者按了什麼」，用的就是畫面上按鈕的文字（例如「先複習所有單字」「看錯題」）。順著箭頭走一遍，就是一位使用者從打開 App、看完教學、考完一輪、複習錯題的完整過程。
 
 ```mermaid
 flowchart TD
-    A([開啟 App]) --> B[首頁 HomeView]
-    B -->|選單字| C[單字分組列表]
-    B -->|選文法| C
+    A([開啟 App]) --> T{已看過教學?}
+    T -->|否| OB[教學遮罩 4 頁]
+    OB -->|開始使用 或 右上角 X| B[首頁 HomeView]
+    T -->|是| B
+    B -->|右上角問號 重看教學| OB
+    B -->|選單字 或 文法| C[分組列表]
     C -->|＋ 新增分組| C
     C -->|點分組| D[批次列表]
-    D -->|匯入| E[匯入頁<br/>貼上或選檔]
-    E -->|解析並切批| D
+    D -->|匯入圖示| E[匯入頁<br/>貼上或選檔]
+    E -->|解析並切批 列出無效行| D
     D -->|點批次| F[批次首頁]
-    F -->|先複習| G[預習清單]
-    F -->|直接測驗| H[測驗 QuizView]
-    G --> H
-    H -->|答完一輪| I[結果 ResultView]
-    I -->|有錯題| J[錯題複習]
-    I -->|完成| C
-    J --> H
+    F -->|先複習所有單字| G[預習清單]
+    F -->|直接開始測驗| H[測驗 QuizView]
+    G -->|開始測驗| H
+    H -->|佇列清空| I[結果 ResultView]
+    I -->|看錯題| J[錯題整理清單]
+    J -->|開始錯題複習| H
+    I -->|回到批次首頁| F
 ```
 
-**編輯模式多選刪除**（分組／批次／單題共用同一互動）：
+> 「回到批次首頁」實際上是關閉測驗頁、回到進入測驗前的那一頁：從批次首頁按「直接開始測驗」就回批次首頁，從預習清單按「開始測驗」就回預習清單。錯題複習那一輪結束後也是同一顆按鈕、同樣的回法。
 
-**怎麼看這張圖**：這張圖有兩個**菱形判斷**，是重點所在。第一個 `{確認對話框}` 問「你確定要刪嗎？」——取消就回去、確認才真的刪。第二個 `{批次是否變空?}` 是刪完後的自動整理：如果某個批次被刪到空了，就移除它；不論是否變空，最後都會「重新連號」（例如刪掉批次 2 後，把批次 3 自動改叫批次 2），讓編號不會出現跳號。
+**內容管理流程**（匯入之後在預習清單裡改內容：編輯、新增、貼上、刪除）：
+
+**怎麼看這張圖**：起點是預習清單，四個**菱形判斷**是重點。`{批次已滿?}` 決定「＋」按下去是直接出選單、還是先問要不要開新批次；`{有效筆數 超過剩餘容量?}` 是貼上 Markdown 之後的容量檢查，超量時會問你「開新批次」還是「放棄此次新增」，放棄就一筆都不寫；`{確認對話框}` 是所有刪除共用的關卡；`{批次變空?}` 是刪完後的自動整理：整批被刪空就移除該批次，不論是否變空最後都會「重新連號」（例如刪掉批次 2 後，批次 3 自動改叫批次 2）。
 
 ```mermaid
-flowchart LR
-    A[點 Edit 進入編輯模式] --> B[勾選多個項目]
-    B --> C[點刪除]
-    C --> D{確認對話框<br/>顯示數量與警告}
-    D -->|取消| B
-    D -->|確認| E[級聯刪除]
-    E --> F{批次是否變空?}
-    F -->|是| G[移除空批次]
-    F -->|否| H[重新連號 reindexBatches]
-    G --> H
-    H --> I([完成])
+flowchart TD
+    G[預習清單] -->|點一列| E1[編輯頁]
+    E1 -->|儲存 需通過欄位驗證| G
+    E1 -->|刪除這一筆| DEL{確認對話框}
+    G -->|＋| FULL{批次已滿?}
+    FULL -->|否| M[選單<br/>手動輸入一筆 或 貼上 Markdown]
+    FULL -->|是| NB{放進新批次?}
+    NB -->|取消| G
+    NB -->|開新批次| M2[同樣的選單<br/>目標改為 deck 末端的新批次]
+    M -->|手動輸入一筆| E2[新增表單]
+    M -->|貼上 Markdown| P[批次貼上頁]
+    E2 -->|儲存| G
+    P --> OV{有效筆數<br/>超過剩餘容量?}
+    OV -->|否| W[全部寫入本批次]
+    OV -->|是| Q{開新批次 或 放棄此次新增}
+    Q -->|開新批次| W2[先填滿本批<br/>其餘交 Importer 切批接在最後]
+    Q -->|放棄此次新增| G
+    W --> G
+    W2 --> G
+    G -->|Edit 進入編輯模式 勾選多個 點刪除| DEL
+    DEL -->|取消| G
+    DEL -->|確認| X[刪除]
+    X --> EMP{批次變空?}
+    EMP -->|是| RM[移除空批次]
+    EMP -->|否| RI[reindexBatches 重新連號]
+    RM --> RI
+    RI --> G
 ```
+
+> 分組列表與批次列表的編輯模式多選刪除，走的是同一個「確認對話框 → 刪除 → 重新連號」關卡，只是刪除的層級不同：刪分組會連帶刪掉底下所有批次與內容，刪批次會連帶刪掉該批所有內容。
 
 ---
 
@@ -220,6 +256,8 @@ flowchart LR
 
 ```
 VocTest/
+├── VocTestApp.swift         # App 進入點，註冊六個 SwiftData model
+├── ContentView.swift        # 根 view：NavigationStack + 首次啟動教學 overlay
 ├── Models/                  # SwiftData @Model 與資料層邏輯（無 SwiftUI）
 │   ├── Deck / Batch / Card
 │   ├── GrammarDeck / GrammarBatch / GrammarItem
@@ -233,12 +271,14 @@ VocTest/
 │   ├── QuizSession / GrammarQuizSession
 │   └── MistakeQuizSession / GrammarMistakeQuizSession
 └── Views/                   # SwiftUI 畫面
-    ├── HomeView / DeckListView / BatchListView / ...
+    ├── HomeView / DeckListView / BatchListView / BatchHomeView / ...
+    ├── OnboardingOverlayView / OnboardingPage / OnboardingIllustrations  # 首次啟動教學：遮罩、四頁內容、向量插圖
     ├── CardEditView / GrammarItemEditView   # 單筆編輯（推入）與新增（sheet）
     ├── BatchImportView / GrammarBatchImportView  # 批次層級的 Markdown 貼上
-    └── ImportView / QuizView / ResultView / ...
+    ├── MistakeReviewView / GrammarMistakeReviewView  # 錯題整理清單，可再開一輪錯題複習
+    └── ImportView / PreviewView / QuizView / ResultView / ...
 
-VocTestTests/                # XCTest 單元測試
+VocTestTests/                # XCTest 單元測試（含 OnboardingTests、AcceptanceTests）
 ```
 
 ---
@@ -248,3 +288,4 @@ VocTestTests/                # XCTest 單元測試
 - **純邏輯層與 UI 解耦**：解析、切批、測驗都不依賴 SwiftUI，讓核心行為可用單元測試鎖定，UI 只做呈現。
 - **單字／文法保持平行而非強行抽象**：兩側雖然結構相似，但差異是本質的（文法題自帶誘答、選項策略不同、SwiftData 對泛型支援有限），因此刻意保留兩套對稱實作，換取可讀性與低耦合，而非過早抽象。
 - **保護性封裝**：`wrongCount` 用 `private(set)`，只允許透過 `recordWrong()` 遞增與 `resetWrongCount()` 歸零，避免外部誤改統計數字。
+- **教學狀態存 `UserDefaults`，不用「資料庫是否為空」判斷**：首次啟動教學只看一個已看過旗標，首次看完才寫入。若改用「沒有任何分組就顯示教學」，使用者把內容全部刪光（這是正常操作）時教學會再跳出來；旗標與 SwiftData 分開存，也讓教學的生命週期完全不受資料變動影響。
