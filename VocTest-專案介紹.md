@@ -95,8 +95,8 @@ flowchart LR
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/01-import-paste.jpg" width="260" alt="匯入頁：貼上 Markdown 表格"></td>
-    <td align="center"><img src="docs/screenshots/02-import-result.jpg" width="260" alt="匯入結果：新增 20 張卡，第 23、24 行為無效行"></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/peiying004/vocabularyApp/develop/feature/docs/screenshots/01-import-paste.jpg" width="260" alt="匯入頁：貼上 Markdown 表格"></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/peiying004/vocabularyApp/develop/feature/docs/screenshots/02-import-result.jpg" width="260" alt="匯入結果：新增 20 張卡，第 23、24 行為無效行"></td>
   </tr>
   <tr>
     <td align="center"><sub>圖 1a：貼上 Markdown 表格</sub></td>
@@ -133,8 +133,8 @@ flowchart TD
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/03-quiz-correct.jpg" width="260" alt="測驗：答對"></td>
-    <td align="center"><img src="docs/screenshots/04-quiz-wrong.jpg" width="260" alt="測驗：答錯並顯示正解"></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/peiying004/vocabularyApp/develop/feature/docs/screenshots/03-quiz-correct.jpg" width="260" alt="測驗：答對"></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/peiying004/vocabularyApp/develop/feature/docs/screenshots/04-quiz-wrong.jpg" width="260" alt="測驗：答錯並顯示正解"></td>
   </tr>
   <tr>
     <td align="center"><sub>圖 2a：四選一答對</sub></td>
@@ -144,7 +144,7 @@ flowchart TD
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/05-batch-home-wrongcount.jpg" width="260" alt="批次首頁：21 張卡，累計錯 5 次"></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/peiying004/vocabularyApp/develop/feature/docs/screenshots/05-batch-home-wrongcount.jpg" width="260" alt="批次首頁：21 張卡，累計錯 5 次"></td>
   </tr>
   <tr>
     <td align="center"><sub>圖 3：批次首頁顯示累計錯誤次數，可重算歸零</sub></td>
